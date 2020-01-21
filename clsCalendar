@@ -1,0 +1,1622 @@
+Option Explicit
+Public WithEvents myTextbox As MSForms.Textbox
+Public WithEvents fm As MSForms.Frame
+Public WithEvents btntgl As MSForms.CommandButton
+Public Event AfterUpdate()
+Public Event BeforeUpdate(ByRef Cancel As Integer)
+Public Event Click()
+Public Event DblClick()
+Public Event KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+
+'# Members for mains Object
+Private WithEvents CB_Tahun As MSForms.ComboBox
+Private WithEvents CB_Bulan As MSForms.ComboBox
+
+Private CLb As MSForms.Label
+Private mDayButtons() As clsCalendar
+Private mLabelButtons() As clsCalendar
+
+Private PTitleNewFont As MSForms.NewFont
+Private PDayNewFont As MSForms.NewFont
+Private PGridNewFont As MSForms.NewFont
+
+'# Members for Button Object
+Private WithEvents CmB As MSForms.CommandButton
+Private CmBl As MSForms.Label
+Private CmBlNum As MSForms.Label
+Private mcmains As clsCalendar
+
+'# For Properties
+Private UkuranFont As Long
+Private ModeBulan As calMonthLength
+Private ModeHari As Long
+Private ModeTahunAwal As Boolean
+Private WarnaJudul As Long
+Private WARNAbackjudul As Long
+Private WarnaGrid As Long
+Private WarnaHari As Long
+Private AwalHari As calDayOfWeek
+Private dValue As Date
+Private lPBackColor As Long
+Private lPMonth As Long
+Private lPYear As Long
+Private lPDay As Long
+Private hr As Long
+Private lPHeaderBackColor As Long
+Private lPUseDefaultBackColors  As Boolean
+Private bPVisible As Boolean
+Private sPHeight As Single
+Private sPWidth As Single
+Private sPTop As Single
+Private sPLeft As Single
+Private lPFridayBackColor As Long
+Private lPSundayBackColor As Long
+Private lPSelectedBackColor As Long
+Private sPControlTipText As String
+Private bPTabStop As Boolean
+Private lPTabIndex As Long
+Private sPTag As String
+
+Private bPShowDays As Boolean
+Private bPShowTitle As Boolean
+Private bPShowDateSelectors As Boolean
+Private bPValueIsNull As Boolean
+Private bPRightToLeft As Boolean
+Private bPMACFix As Boolean 'Fix MAC transparency errors
+Private bPFridaySelectable As Boolean
+Private bPSundaySelectable As Boolean
+
+Private Const cDayFontColorSelected As Long = &H80000012  'Button text - Black
+Private Const cDayFontColorInactive As Long = &H80000011  'Disabled text - Dark gray
+Private Const cDefaultWidth As Single = 216
+Private Const cDefaultHeight As Single = 144
+
+Public Enum calDayOfWeek
+    dwMonday = 1
+    dwTuesday = 2
+    dwWednesday = 3
+    dwThursday = 4
+    dwFriday = 5
+    dwSaturday = 6
+    dwSunday = 7
+End Enum
+
+Public Enum calMonthLength '(Used for month and day names too.)
+    mlLocalLong = 0 'Local name, long form
+    mlLocalShort = 1 'Local name, short form
+    mlENLong = 2 'English name, long form
+    mlENShort = 3 'English name, short form
+End Enum
+
+
+
+'################################################
+'# Properties for mains object - Not available
+
+Public Property Get GridCellEffect() As Long
+'Property Blank - not work
+'Determines the effect used to display the grid.
+End Property
+
+Public Property Get GridLinesColor() As Long
+'Property Blank - not work
+'Determines the color used to display the lines in the grid.
+End Property
+
+Public Property Get ShowHorizontalGrid() As Boolean
+'Property Blank - not work
+'Specifies whether the calendar display horizontal gridlines.
+End Property
+
+Public Property Get ShowVerticalGrid() As Boolean
+'Property Blank - not work
+'Specifies whether to display vertical gridlines.
+End Property
+
+Public Property Get HelpContextID() As Long
+'Property Blank - not work
+'Specifies Help identifier
+End Property
+
+
+'###########################
+'# Properties for mains object
+
+Public Property Get Tag() As String
+    Tag = sPTag
+End Property
+
+Public Property Let Tag(sTag As String)
+    sPTag = sTag
+End Property
+
+Public Property Get Parent() As Control
+    If bInit Then
+        Set Parent = CB_Tahun.Parent.Parent
+    Else
+        Set Parent = Nothing
+    End If
+End Property
+
+Public Property Get ValueIsNull() As Boolean
+    ValueIsNull = bPValueIsNull
+End Property
+
+Public Property Let ValueIsNull(ByVal bValueIsNull As Boolean)
+    bPValueIsNull = bValueIsNull
+    If bInit Then
+        Value = Value
+    End If
+End Property
+
+Public Property Get ShowTitle() As Boolean
+    ShowTitle = bPShowTitle
+End Property
+
+Public Property Let ShowTitle(ByVal bShowTitle As Boolean)
+    bPShowTitle = bShowTitle
+    If bInit Then
+        CLb.Visible = bPShowTitle
+        Call Move
+    End If
+End Property
+Public Property Get ShowDays() As Boolean
+    ShowDays = bPShowDays
+End Property
+
+Public Property Let ShowDays(ByVal bShowDays As Boolean)
+    Dim i As Long
+    bPShowDays = bShowDays
+    If bInit Then
+        For i = 0 To 6
+            mLabelButtons(i).Obj_CmBl.Visible = bShowDays
+        Next
+        Call Move
+    End If
+End Property
+
+Public Property Get ShowDateSelectors() As Boolean
+    ShowDateSelectors = bPShowDateSelectors
+End Property
+
+Public Property Let ShowDateSelectors(ByVal bShowDateSelectors As Boolean)
+    bPShowDateSelectors = bShowDateSelectors
+    If bInit Then
+        CB_Tahun.Visible = bShowDateSelectors
+        CB_Bulan.Visible = bShowDateSelectors
+        Call Move
+    End If
+End Property
+
+Public Property Get TabIndex() As Long
+    TabIndex = lPTabIndex
+End Property
+
+Public Property Let TabIndex(ByVal lTabIndex As Long)
+    lPTabIndex = lTabIndex
+    If bInit Then
+        CB_Tahun.Parent.TabIndex = lTabIndex
+    End If
+End Property
+
+Public Property Get TabStop() As Boolean
+    TabStop = bPTabStop
+End Property
+
+Public Property Let TabStop(ByVal bTabStop As Boolean)
+    bPTabStop = bTabStop
+    If bInit Then
+        CB_Tahun.Parent.TabStop = bTabStop
+    End If
+End Property
+
+Public Property Get ControlTipText() As String
+    ControlTipText = sPControlTipText
+End Property
+
+Public Property Let ControlTipText(ByVal sControlTipText As String)
+    Dim i As Long
+    sPControlTipText = sControlTipText
+    If bInit Then
+        For i = 0 To 6
+            mLabelButtons(i).Obj_CmBl.ControlTipText = sControlTipText
+        Next
+        For i = 0 To 41
+            mDayButtons(i).Obj_Cmb.ControlTipText = sControlTipText
+        Next
+        CB_Bulan.ControlTipText = sControlTipText
+        CB_Tahun.ControlTipText = sControlTipText
+        CLb.ControlTipText = sControlTipText
+        'CB_Tahun.Parent.ControlTipText = sControlTipText
+    End If
+End Property
+
+Public Property Get GridFont() As MSForms.NewFont
+    Set GridFont = PGridNewFont
+End Property
+
+Public Property Set GridFont(ByRef clGridNewFont As MSForms.NewFont)
+    Set PGridNewFont = clGridNewFont
+End Property
+
+Public Property Get DayFont() As MSForms.NewFont
+    Set DayFont = PDayNewFont
+End Property
+
+Public Property Set DayFont(ByRef clDayNewFont As MSForms.NewFont)
+    Set PDayNewFont = clDayNewFont
+End Property
+
+Public Property Get TitleFont() As MSForms.NewFont
+    Set TitleFont = PTitleNewFont
+End Property
+
+Public Property Set TitleFont(ByRef clTitleNewFont As MSForms.NewFont)
+    Set PTitleNewFont = clTitleNewFont
+End Property
+
+Public Property Get Visible() As Boolean
+    Visible = bPVisible
+End Property
+
+Public Property Let Visible(ByVal bVisible As Boolean)
+    bPVisible = bVisible
+    If bInit Then
+        CB_Tahun.Parent.Visible = bVisible
+    End If
+End Property
+
+Public Property Get Left() As Single
+    Left = sPLeft
+End Property
+
+Public Property Let Left(ByVal sLeft As Single)
+    sPLeft = sLeft
+    If bInit Then
+        CB_Tahun.Parent.Left = sLeft
+    End If
+End Property
+
+Public Property Get Top() As Single
+    Top = sPTop
+End Property
+
+Public Property Let Top(ByVal ssTop As Single)
+    sPTop = ssTop
+    If bInit Then
+        CB_Tahun.Parent.Top = ssTop
+    End If
+End Property
+
+Public Property Get Height() As Single
+    Height = sPHeight
+End Property
+
+Public Property Let Height(ByVal sHeight As Single)
+    sPHeight = sHeight
+    If bInit Then
+        CB_Tahun.Parent.Height = sHeight
+        Call Move
+    End If
+End Property
+
+
+Public Property Get Width() As Single
+    Width = sPWidth
+End Property
+
+Public Property Let Width(ByVal sWidth As Single)
+    'sWidth = Zero_Negative_Value(sWidth)
+    sPWidth = sWidth
+    If bInit Then
+        CB_Tahun.Parent.Width = sWidth
+        Call Move
+    End If
+End Property
+
+Public Property Get BackColor() As Long
+    BackColor = lPBackColor
+End Property
+
+Public Property Let BackColor(ByVal lBackColor As Long)
+    lPBackColor = lBackColor
+    If bInit Then
+        CB_Tahun.Parent.BackColor = lBackColor
+    End If
+End Property
+
+Public Property Get HeaderBackColor() As Long
+    HeaderBackColor = lPHeaderBackColor
+End Property
+
+Public Property Let HeaderBackColor(ByVal lHeaderBackColor As Long)
+Dim i As Long
+    lPHeaderBackColor = lHeaderBackColor
+    UseDefaultBackColors = False
+End Property
+
+Public Property Get UseDefaultBackColors() As Boolean
+    UseDefaultBackColors = lPUseDefaultBackColors
+End Property
+
+Public Property Let UseDefaultBackColors(ByVal lUseDefaultBackColors As Boolean)
+    lPUseDefaultBackColors = lUseDefaultBackColors
+    Call refresh
+End Property
+
+Public Property Get FridayBackColor() As Long
+    FridayBackColor = lPFridayBackColor
+End Property
+
+Public Property Let FridayBackColor(ByVal lFridayBackColor As Long)
+    lPFridayBackColor = lFridayBackColor
+    UseDefaultBackColors = False
+End Property
+
+Public Property Get SundayBackColor() As Long
+    SundayBackColor = lPSundayBackColor
+End Property
+
+Public Property Let SundayBackColor(ByVal lSundayBackColor As Long)
+    lPSundayBackColor = lSundayBackColor
+    UseDefaultBackColors = False
+End Property
+
+Public Property Get SelectedBackColor() As Long
+    SelectedBackColor = lPSelectedBackColor
+End Property
+
+Public Property Let SelectedBackColor(ByVal lSelectedBackColor As Long)
+    lPSelectedBackColor = lSelectedBackColor
+    Call refresh
+End Property
+
+Public Property Get FridaySelectable() As Boolean
+    FridaySelectable = bPFridaySelectable
+End Property
+
+Public Property Let FridaySelectable(ByVal bFridaySelectable As Boolean)
+    bPFridaySelectable = bFridaySelectable
+    Call refresh
+End Property
+
+Public Property Get SundaySelectable() As Boolean
+    SundaySelectable = bPSundaySelectable
+End Property
+
+Public Property Let SundaySelectable(ByVal bSundaySelectable As Boolean)
+    bPSundaySelectable = bSundaySelectable
+    Call refresh
+End Property
+
+Public Property Get FirstDay() As calDayOfWeek
+    FirstDay = AwalHari
+End Property
+
+Public Property Let FirstDay(ByVal vbFirstDay As calDayOfWeek)
+    Select Case vbFirstDay
+        Case 1 To 7
+        Case Else
+            vbFirstDay = 1
+    End Select
+    
+    AwalHari = vbFirstDay
+    If bInit Then
+        Call ApplyWeekDayLabelChanges
+        Call refresh
+    End If
+End Property
+
+Public Property Get DayFontColor() As Long
+    DayFontColor = WarnaHari
+End Property
+
+Public Property Let DayFontColor(ByVal lFontColor As Long)
+    Dim i As Long
+    
+    WarnaHari = lFontColor
+    If bInit Then
+        For i = 0 To 6
+            mLabelButtons(i).Obj_CmBl.ForeColor = lFontColor
+        Next
+    End If
+End Property
+
+Public Property Get GridFontColor() As Long
+    GridFontColor = WarnaGrid
+End Property
+
+Public Property Let GridFontColor(ByVal lFontColor As Long)
+    WarnaGrid = lFontColor
+    Call refresh
+End Property
+
+Public Property Let TitleFontColor(ByVal lFontColor As Long)
+    WarnaJudul = lFontColor
+    If bInit Then
+        CLb.ForeColor = lFontColor
+    End If
+End Property
+
+Public Property Get TitleFontColor() As Long
+    TitleFontColor = WarnaJudul
+End Property
+
+Public Property Get Month() As Long
+    Month = lPMonth
+End Property
+
+Public Property Let Month(ByVal lMonth As Long)
+    If lMonth = 0 Then
+        Value = Empty
+    Else
+        If lMonth < 0 Then lMonth = lPMonth
+        lMonth = fMin(lMonth, 12)
+        Value = SumMonthsToDate(dValue, lMonth - lPMonth)
+    End If
+    lPMonth = lMonth
+End Property
+
+Public Property Get Year() As Long
+    Year = lPYear
+End Property
+
+Public Property Let Year(ByVal lYear As Long)
+    If lYear = 0 Then
+        Value = Empty
+    Else
+        Value = VBA.DateSerial(CheckYear(lYear), VBA.Month(dValue), VBA.Day(dValue))
+    End If
+    lPYear = lYear
+End Property
+
+Public Property Get Day() As Long
+    Day = lPDay
+End Property
+
+Public Property Let Day(ByVal lDay As Long)
+    If lDay = 0 Then
+        Value = Empty
+    Else
+        If lDay < 0 Then lDay = lPDay
+        lDay = fMin(lDay, VBA.Day(VBA.DateSerial(VBA.Year(dValue), VBA.Month(dValue) + 1, 0)))
+        Value = VBA.DateSerial(VBA.Year(dValue), VBA.Month(dValue), lDay)
+    End If
+    lPDay = lDay
+End Property
+
+Public Property Get Value() As Variant
+ 
+    If bPValueIsNull Then
+        Value = Empty
+        
+    Else
+        Value = dValue
+        
+    End If
+    
+End Property
+
+Public Property Let Value(ByVal newDate As Variant)
+    Dim Cancel As Integer '*** Integer for backward compatibility
+    
+    If CheckValue(newDate) = False Then newDate = Empty
+
+    RaiseEvent BeforeUpdate(Cancel)
+    
+    If Cancel = 0 Then 'Not canceled.
+
+        If bInit And Not IsEmpty(newDate) Then
+            CB_Tahun.ListIndex = VBA.Year(newDate) - 1975
+            CB_Bulan.ListIndex = VBA.Month(newDate) - 1
+        End If
+        
+        If (bPValueIsNull = IsEmpty(newDate)) Or (newDate <> dValue) Then
+            If Not IsEmpty(newDate) Then
+                dValue = newDate
+            End If
+            bPValueIsNull = IsEmpty(newDate)
+            
+            Call refresh
+        End If
+        
+        RaiseEvent AfterUpdate
+    End If
+    On Error Resume Next
+    
+End Property
+
+Public Property Get DayLength() As calMonthLength
+    DayLength = ModeHari
+End Property
+
+Public Property Let DayLength(ByVal bDayLength As calMonthLength)
+    ModeHari = bDayLength
+    If bInit Then
+        Call ApplyWeekDayLabelChanges
+    End If
+End Property
+
+Public Property Get MonthLength() As calMonthLength
+    MonthLength = ModeBulan
+End Property
+
+Public Property Let MonthLength(ByVal iMonthLength As calMonthLength)
+    ModeBulan = iMonthLength
+
+    If bInit Then
+        CB_Bulan.List = fMonthName(CLng(iMonthLength))
+        Value = Value
+    End If
+End Property
+
+Public Property Get YearFirst() As Boolean
+    YearFirst = ModeTahunAwal
+End Property
+
+Public Property Let YearFirst(ByVal bYearFirst As Boolean)
+    ModeTahunAwal = bYearFirst
+    Call RenderLabel
+End Property
+
+
+Public Property Get MACFix() As Boolean
+    MACFix = bPMACFix
+End Property
+
+Public Property Let MACFix(ByVal bMACFix As Boolean)
+    bPMACFix = bMACFix
+    Call refresh
+End Property
+
+
+Public Property Get RightToLeft() As Boolean
+    RightToLeft = bPRightToLeft
+End Property
+
+Public Property Let RightToLeft(ByVal bRightToLeft As Boolean)
+    bPRightToLeft = bRightToLeft
+    If bInit Then
+        Call ApplyWeekDayLabelChanges
+        Call refresh
+    End If
+End Property
+
+
+'###########################
+'# Properties for Day button objects
+
+Public Property Set Mains(ByVal themains As clsCalendar)
+    Set mcmains = themains
+End Property
+
+Private Property Get Mains() As clsCalendar
+    Set Mains = mcmains
+End Property
+
+Public Property Get Obj_Cmb() As MSForms.CommandButton
+    Set Obj_Cmb = CmB
+End Property
+
+Public Property Set Obj_Cmb(ByVal vNewValue As MSForms.CommandButton)
+    Set CmB = vNewValue
+End Property
+
+Public Property Get Obj_CmBl() As MSForms.Label
+    Set Obj_CmBl = CmBl
+End Property
+
+Public Property Set Obj_CmBl(ByVal vNewValue As MSForms.Label)
+    Set CmBl = vNewValue
+End Property
+
+Public Property Set Obj_CmBlNum(ByVal vNewValue As MSForms.Label)
+    Set CmBlNum = vNewValue
+End Property
+
+Public Property Get Obj_CmBlNum() As MSForms.Label
+    Set Obj_CmBlNum = CmBlNum
+End Property
+
+
+'###########################
+'# Public Methods
+
+Public Sub AboutBox()
+    MsgBox "Autori: r, Kris, Gabor"
+End Sub
+
+Public Sub Add(ByVal fForm As MSForms.UserForm)
+
+    Dim cFrame As MSForms.Frame
+    Set cFrame = fForm.Controls.Add("Forms.Frame.1")
+    
+    With cFrame
+        .Width = IIf(sPWidth < 0, cDefaultWidth, sPWidth)
+        .Height = IIf(sPHeight < 0, cDefaultHeight, sPHeight)
+    End With
+    
+    Call Add_Calendar_into_Frame(cFrame)
+    
+End Sub
+
+Public Sub Add_To_Textbox(Textbox As MSForms.Textbox)
+    Set myTextbox = Textbox
+   
+    
+    Set btntgl = Textbox.Parent.Controls.Add("Forms.commandbutton.1")
+    With btntgl
+        .Caption = "..."
+        .Move myTextbox.Left + myTextbox.Width + 3, myTextbox.Top, 30, myTextbox.Height
+    End With
+    
+    Set fm = Textbox.Parent.Controls.Add("Forms.frame.1")
+    With fm
+        
+        .Move myTextbox.Left + myTextbox.Width - fm.Width + btntgl.Width + 3, myTextbox.Top + myTextbox.Height + 5
+    End With
+    Add_Calendar_into_Frame fm
+    fm.Visible = False
+End Sub
+
+Public Sub Add_Calendar_into_Frame(ByVal cFrame As MSForms.Frame)
+    Dim i As Long
+    Dim v(199) As Variant
+    Dim w As Variant
+    Dim dTemp As Date
+    lPUseDefaultBackColors = False
+    Me.DayLength = mlLocalLong
+    PDayNewFont.Size = 7
+    For i = 0 To 199
+        v(i) = CStr(1975 + i)
+    Next
+    
+    With cFrame
+        .BackColor = &H843D0D
+        
+        .Caption = ""
+        .SpecialEffect = 0
+        '.Top = IIf(sPTop = -1, .Top, sPTop)
+        '.Left = IIf(sPLeft = -1, .Left, sPLeft)
+        '.Width = IIf(sPWidth < 0, .Width, sPWidth)
+        '.Height = IIf(sPHeight < 0, .Height, sPHeight)
+        .Visible = bPVisible
+        
+        'Top = .Top
+        'Left = .Left
+        'Width = .Width
+        'Height = .Height
+    End With
+    
+    
+    'Add this first, for proper taborder (Need TabStop.)
+    Set CLb = cFrame.Controls.Add("Forms.Label.1")
+    Set CB_Tahun = cFrame.Controls.Add("Forms.ComboBox.1")
+    Set CB_Bulan = cFrame.Controls.Add("Forms.ComboBox.1")
+    
+    ReDim mLabelButtons(6)
+    ReDim mDayButtons(41)
+    w = fWeekdayName(CInt(ModeHari))
+    
+    For i = 0 To 6
+        Set mLabelButtons(i) = New clsCalendar
+        Set mLabelButtons(i).Mains = Me
+        Set mLabelButtons(i).Obj_CmBl = cFrame.Controls.Add("Forms.Label.1")
+        With mLabelButtons(i).Obj_CmBl
+            .Caption = w(((i + AwalHari - 1) Mod 7))
+            .ForeColor = DayFontColor
+            .TextAlign = fmTextAlignCenter
+            .BorderStyle = fmBorderStyleSingle
+            .BorderColor = &H80000010  'Button shadow  &H80000015 'Button dark shadow
+            '.SpecialEffect = fmSpecialEffectEtched
+            If HeaderBackColor = -1 Then
+                .BackColor = cDayFontColorSelected 'Dark gray
+                .BackStyle = fmBackStyleTransparent
+            Else
+                .BackColor = HeaderBackColor
+                .BackStyle = fmBackStyleOpaque
+            End If
+        End With
+    Next
+            
+    For i = 0 To 41
+        Set mDayButtons(i) = New clsCalendar
+        Set mDayButtons(i).Mains = Me
+        
+        Set mDayButtons(i).Obj_CmBl = cFrame.Controls.Add("Forms.Label.1")
+        With mDayButtons(i).Obj_CmBl 'MAC Fix
+            .TextAlign = fmTextAlignCenter
+        End With
+        
+        Set mDayButtons(i).Obj_CmBlNum = cFrame.Controls.Add("Forms.Label.1")
+        With mDayButtons(i).Obj_CmBlNum
+            .TextAlign = fmTextAlignCenter
+            .BackStyle = fmBackStyleTransparent
+        End With
+        
+        Set mDayButtons(i).Obj_Cmb = cFrame.Controls.Add("Forms.CommandButton.1")
+        With mDayButtons(i).Obj_Cmb
+            .BackStyle = fmBackStyleTransparent 'MAC Problem: No button transparency
+        End With
+        
+        mDayButtons(i).RightToLeft = bPRightToLeft
+    Next
+    
+    With CB_Tahun
+        .ListRows = 12
+        .List = v
+        .ListIndex = VBA.Year(dValue) - 1975
+        .ShowDropButtonWhen = fmShowDropButtonWhenFocus
+        .font.Bold = True
+        .MatchRequired = True
+    End With
+
+    With CB_Bulan
+        .ListRows = 12
+        .List = fMonthName(ModeBulan)
+        .ListIndex = VBA.Month(dValue) - 1
+        .ShowDropButtonWhen = fmShowDropButtonWhenFocus
+        .font.Bold = True
+        .MatchRequired = True
+    End With
+    
+    With CLb
+        .ForeColor = TitleFontColor
+        .TextAlign = fmTextAlignCenter
+        .BackStyle = 1 'fmBackStyleTransparent
+        .BackColor = WARNAbackjudul
+    End With
+    
+    Call ApplyWeekDayLabelChanges
+    
+    Call ApplyFontChanges
+    
+    Call Refresh_Properities
+    
+    Call Move
+    
+End Sub
+
+Private Sub ApplyWeekDayLabelChanges()
+    Dim i As Long
+    Dim w
+    
+    w = fWeekdayName(CInt(ModeHari))
+    For i = 0 To 6
+        If bPRightToLeft Then
+            mLabelButtons(6 - i).Obj_CmBl.Caption = w((i + AwalHari - 1) Mod 7)
+        Else
+            mLabelButtons(i).Obj_CmBl.Caption = w((i + AwalHari - 1) Mod 7)
+        End If
+    Next
+End Sub
+
+Private Sub ApplyFontChanges()
+    Dim font As MSForms.NewFont
+    Dim i As Long
+
+    If Not PDayNewFont Is Nothing Then
+        For i = 0 To 6
+            With mLabelButtons(i).Obj_CmBl
+                If .font.Bold <> DayFont.Bold Then _
+                    .font.Bold = DayFont.Bold
+                If .font.Weight <> DayFont.Weight Then _
+                    .font.Weight = DayFont.Weight
+                If .font.Charset <> DayFont.Charset Then _
+                    .font.Charset = DayFont.Charset
+                If .font.Italic <> DayFont.Italic Then _
+                    .font.Italic = DayFont.Italic
+                If .font.Name <> DayFont.Name Then _
+                    .font.Name = DayFont.Name
+                If .font.Size <> DayFont.Size Then _
+                    .font.Size = DayFont.Size
+                If DayFont.Strikethrough Then _
+                    .font.Strikethrough = True
+                If DayFont.Underline Then _
+                    .font.Underline = True
+            End With
+        Next
+    End If
+            
+    If Not PGridNewFont Is Nothing Then
+        For i = 0 To 41
+            If Not bPMACFix Then
+                Set font = mDayButtons(i).Obj_CmBlNum.font
+            Else
+                Set font = mDayButtons(i).Obj_Cmb.font
+            End If
+        
+            With font
+                If .Bold <> GridFont.Bold Then _
+                    .Bold = GridFont.Bold
+                If .Weight <> GridFont.Weight Then _
+                    .Weight = GridFont.Weight
+                If .Charset <> GridFont.Charset Then _
+                    .Charset = GridFont.Charset
+                If .Italic <> GridFont.Italic Then _
+                    .Italic = GridFont.Italic
+                If .Name <> GridFont.Name Then _
+                    .Name = GridFont.Name
+                If .Size <> GridFont.Size Then _
+                    .Size = GridFont.Size
+                If GridFont.Strikethrough Then _
+                    .Strikethrough = True
+                If GridFont.Underline Then _
+                    .Underline = True
+            End With
+        Next
+    End If
+    
+    If Not PTitleNewFont Is Nothing Then
+        With CLb
+                If .font.Bold <> TitleFont.Bold Then _
+                    .font.Bold = TitleFont.Bold
+                If .font.Weight <> TitleFont.Weight Then _
+                    .font.Weight = TitleFont.Weight
+                If .font.Charset <> TitleFont.Charset Then _
+                    .font.Charset = TitleFont.Charset
+                If .font.Italic <> TitleFont.Italic Then _
+                    .font.Italic = TitleFont.Italic
+                If .font.Name <> TitleFont.Name Then _
+                    .font.Name = TitleFont.Name
+                If .font.Size <> TitleFont.Size Then _
+                    .font.Size = TitleFont.Size
+                If TitleFont.Strikethrough Then _
+                    .font.Strikethrough = True
+                If TitleFont.Underline Then _
+                    .font.Underline = True
+        End With
+    End If
+
+End Sub
+
+Public Sub Move( _
+        Optional vLeft, _
+        Optional vTop, _
+        Optional vWidth, _
+        Optional vHeight, _
+        Optional vLayout)
+        
+    Dim i As Long, l As Currency, b As Currency, lc As Currency, bc As Currency
+    Dim t As Long, b_ym As Currency, b_combo_m As Currency
+    
+    Const h_combo As Long = 16
+    Const b_combo_y As Long = 42
+    b_combo_m = IIf(ModeBulan = mlENShort Or ModeBulan = mlLocalShort, 42, 66) '66
+    b_ym = b_combo_y + 2 + b_combo_m
+    
+    If bInit Then
+        t = IIf(ShowDays, 7, 6)
+        
+        With CB_Tahun.Parent 'Frame
+            sPTop = IIf(IsMissing(vTop), IIf(Top = -1, .Top, Top), vTop)
+            sPLeft = IIf(IsMissing(vLeft), IIf(Left = -1, .Left, Left), vLeft)
+            sPHeight = IIf(IsMissing(vHeight), IIf(Height = -1, .Height, Height), vHeight)
+            sPWidth = IIf(IsMissing(vWidth), IIf(Width = -1, .Width, Width), vWidth)
+            
+            l = Height
+            b = Width
+            l = Zero_Negative_Value(l - IIf(ShowTitle Or ShowDateSelectors, h_combo, 0) - 1)
+            lc = CCur(l / t)
+            bc = CCur(b / 7)
+            b = bc * 7
+        End With
+        
+        If ShowTitle Then
+            With CLb
+                .Width = Zero_Negative_Value(IIf(ShowDateSelectors, b - b_ym, b))
+                .Height = h_combo
+                .Left = 0
+            End With
+        End If
+        
+        If ShowDateSelectors Then
+            With CB_Tahun
+                .Width = b_combo_y
+                .Height = h_combo
+                .Left = IIf(ShowTitle, CLb.Width, Int((b - b_ym) / 2)) + _
+                       IIf(YearFirst, 0, b_combo_m + 2)
+            End With
+        
+            With CB_Bulan
+                .Width = b_combo_m
+                .Height = h_combo
+                .Left = IIf(ShowTitle, CLb.Width, Int((b - b_ym) / 2)) + _
+                       IIf(YearFirst, b_combo_y + 2, 0)
+            End With
+        End If
+        If ShowDays Then
+            For i = 0 To 6
+                With mLabelButtons(i).Obj_CmBl
+                    .Top = IIf(ShowTitle Or ShowDateSelectors, h_combo + 2, 0)
+                    .Left = (i Mod 7) * bc - IIf(i > 0, 1, 0)
+                    .Height = lc
+                    .Width = bc + IIf(i > 0, 1, 0)
+                End With
+            Next
+        End If
+        For i = 0 To 41
+            With mDayButtons(i).Obj_Cmb
+                .Top = Int(i / 7) * lc + _
+                       IIf(ShowTitle Or ShowDateSelectors, h_combo + 2, 0) + _
+                       IIf(ShowDays, lc, 0)
+                .Left = (i Mod 7) * bc
+                .Height = lc
+                .Width = bc
+            End With
+            With mDayButtons(i).Obj_CmBl
+                .Top = mDayButtons(i).Obj_Cmb.Top
+                .Left = mDayButtons(i).Obj_Cmb.Left
+                .Height = mDayButtons(i).Obj_Cmb.Height
+                .Width = mDayButtons(i).Obj_Cmb.Width
+            End With
+            
+            With mDayButtons(i).Obj_CmBlNum
+                .Top = Int(i / 7) * lc + _
+                       IIf(ShowTitle Or ShowDateSelectors, h_combo, 0) + _
+                       IIf(ShowDays, lc, 0) + 6
+                .Left = (i Mod 7) * bc + 3
+                .Height = Zero_Negative_Value(lc - 6)
+                .Width = Zero_Negative_Value(bc - 6)
+            End With
+
+        Next
+        
+    Else
+        sPHeight = IIf(IsMissing(Height), cDefaultHeight, Height)
+        sPWidth = IIf(IsMissing(Width), cDefaultWidth, Width)
+    End If
+End Sub
+
+Public Sub NextDay()
+    Dim d As Date
+    d = dValue + 1
+    d = VBA.DateSerial(CheckYear(VBA.Year(d)), VBA.Month(d), VBA.Day(d))
+    Value = d
+End Sub
+
+Public Sub NextWeek()
+    Dim d As Date
+    d = dValue + 7
+    d = VBA.DateSerial(CheckYear(VBA.Year(d)), VBA.Month(d), VBA.Day(d))
+    Value = d
+End Sub
+
+Public Sub NextMonth()
+    Value = SumMonthsToDate(dValue, 1)
+End Sub
+
+Public Sub NextYear()
+    Dim d As Date
+    d = VBA.DateSerial(CheckYear(VBA.Year(dValue) + 1), VBA.Month(dValue), VBA.Day(dValue))
+    Value = d
+End Sub
+
+Public Sub PreviousDay()
+    Dim d As Date
+    d = dValue - 1
+    d = VBA.DateSerial(CheckYear(VBA.Year(d)), VBA.Month(d), VBA.Day(d))
+    Value = d
+End Sub
+
+Public Sub PreviousWeek()
+    Dim d As Date
+    d = dValue - 7
+    d = VBA.DateSerial(CheckYear(VBA.Year(d)), VBA.Month(d), VBA.Day(d))
+    Value = d
+End Sub
+
+Public Sub PreviousMonth()
+    Value = SumMonthsToDate(dValue, -1)
+End Sub
+
+Public Sub PreviousYear()
+    Dim d As Date
+    d = VBA.DateSerial(CheckYear(VBA.Year(dValue) - 1), VBA.Month(dValue), VBA.Day(dValue))
+    Value = d
+End Sub
+
+Public Sub Today()
+    Value = VBA.Date
+End Sub
+
+Public Sub refresh()
+    If bInit Then
+        Call Refresh_Panel(VBA.Month(dValue), VBA.Year(dValue))
+        Call ApplyFontChanges
+    End If
+End Sub
+
+
+Private Sub btntgl_Click()
+    On Error Resume Next
+    With CLb.Parent
+        .Visible = .Visible = False
+        .zindex = 0
+    End With
+End Sub
+
+Private Sub btntgl_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
+    Call btntgl_Click
+End Sub
+
+'###########################
+'# Events for mains Object Components
+'###########################
+
+Private Sub CB_Tahun_Change()
+    RenderLabel
+    Refresh_Panel CB_Bulan.ListIndex + 1, CB_Tahun.ListIndex + 1975
+    
+End Sub
+
+Private Sub CB_Bulan_Change()
+    RenderLabel
+    Refresh_Panel CB_Bulan.ListIndex + 1, CB_Tahun.ListIndex + 1975
+    
+     
+End Sub
+
+
+Private Sub CmB_Click()
+    Mains.Value = dValue
+    
+    Call Mains.Event_Click
+   On Error Resume Next
+   If Not Mains.myTextbox Is Nothing Then
+        Mains.myTextbox.Text = dValue
+        Mains.fm.Visible = False
+   End If
+   
+End Sub
+
+Private Sub CmB_DblClick(ByVal Cancel As MSForms.ReturnBoolean)
+    Call Mains.Event_DblClick
+End Sub
+
+
+Private Sub CmB_KeyDown( _
+    ByVal KeyCode As MSForms.ReturnInteger, _
+    ByVal Shift As Integer)
+    
+    Dim newDate As Date
+
+    '38 Up
+    '37 Left
+    '39 Right
+    '40 Down
+    
+    newDate = dValue
+    
+    Select Case KeyCode
+    Case 37
+        If bPRightToLeft Then
+            newDate = newDate + 1
+        Else
+            newDate = newDate - 1
+        End If
+    Case 39
+        If bPRightToLeft Then
+            newDate = newDate - 1
+        Else
+            newDate = newDate + 1
+        End If
+    Case 38
+        newDate = newDate - 7
+    Case 40
+        newDate = newDate + 7
+    Case 9
+    End Select
+    
+    If newDate <> dValue Then
+        Mains.Value = newDate
+        KeyCode = 0
+    Else
+        Call Mains.Event_KeyDown(KeyCode, Shift)
+    End If
+End Sub
+
+
+Private Sub Class_Initialize()
+    bPShowDays = True
+    bPShowTitle = True
+    bPShowDateSelectors = True
+    dValue = VBA.Date
+    lPMonth = VBA.Month(VBA.Date)
+    lPYear = VBA.Year(VBA.Date)
+    lPDay = VBA.Day(VBA.Date)
+    UkuranFont = 8
+    ModeBulan = 1
+    ModeHari = 1
+    ModeTahunAwal = False
+    WarnaJudul = &HFFFFFF
+    WARNAbackjudul = &H843D0D
+    WarnaGrid = &HA00000
+    WarnaHari = &HFFFFFF
+    AwalHari = 1
+    lPBackColor = &HFFFFFF
+    lPHeaderBackColor = &H40&         ' 10053171 '&HFFAA99
+    lPUseDefaultBackColors = True
+    lPFridayBackColor = &HC0FFC0
+    lPSundayBackColor = &H8080FF      ' &HFFAA99 '&H80000002
+    lPSelectedBackColor = &H8000000D
+    bPVisible = True
+    sPHeight = -1
+    sPWidth = -1
+    sPTop = -1
+    sPLeft = -1
+    sPControlTipText = ""
+    bPRightToLeft = False
+    bPFridaySelectable = True
+    bPSundaySelectable = True
+    
+    Set TitleFont = New MSForms.NewFont
+    With TitleFont
+        .Name = "Arial"
+        .Size = UkuranFont + 4
+        .Bold = True
+    End With
+    
+    Set DayFont = New MSForms.NewFont
+    With DayFont
+        .Name = "Arial"
+        .Size = UkuranFont + 2
+        .Bold = True
+    End With
+    
+    Set GridFont = New MSForms.NewFont
+    With GridFont
+        .Name = "Arial"
+        .Size = UkuranFont
+    End With
+
+End Sub
+
+Private Sub Class_Terminate()
+    Erase mDayButtons
+    Erase mLabelButtons
+    Set mcmains = Nothing
+    Set PTitleNewFont = Nothing
+    Set PDayNewFont = Nothing
+    Set PGridNewFont = Nothing
+    Set CB_Tahun = Nothing
+    Set CB_Bulan = Nothing
+    Set CmB = Nothing
+    Set CLb = Nothing
+    Set CmBl = Nothing
+
+End Sub
+
+'###########################
+'# Private Function
+
+Private Function ArraY_Days(ByVal lMonth As Long, ByVal lYear As Long)
+    Dim v(0 To 41) As Date, i As Long, g As Long, l As Long, p As Long, t As Date
+    
+    i = VBA.DateTime.Weekday(VBA.DateSerial(lYear, lMonth, 1), 1 + AwalHari Mod 7) - 1
+    
+    If i = 0 Then i = 7
+    
+    g = VBA.Day(VBA.DateSerial(lYear, lMonth + 1, 0)) + i
+    
+    p = 1
+    For l = i To 0 Step -1
+        v(l) = VBA.DateSerial(lYear, lMonth, p)
+        p = p - 1
+    Next
+    
+    p = 0
+    For l = i To g
+        p = p + 1
+        v(l) = VBA.DateSerial(lYear, lMonth, p)
+    Next
+    
+    For l = g To 41
+        v(l) = VBA.DateSerial(lYear, lMonth, p)
+        p = p + 1
+    Next
+    
+    If bPRightToLeft Then
+        For l = 0 To 5
+            For i = 0 To 2
+                t = v(l * 7 + i)
+                v(l * 7 + i) = v(l * 7 + (6 - i))
+                v(l * 7 + (6 - i)) = t
+            Next
+        Next
+    End If
+    
+    ArraY_Days = v
+End Function
+
+Private Sub RenderLabel()
+    Dim b As Currency, b_ym As Currency, b_combo_m As Long
+    
+    Const b_combo_y As Long = 42
+    b_combo_m = IIf(ModeBulan = mlENShort Or ModeBulan = mlLocalShort, 42, 66) '66
+    b_ym = b_combo_y + 2 + b_combo_m
+    
+    If bInit Then
+        b = CB_Tahun.Parent.Width
+        If ModeTahunAwal Then
+            CLb.Caption = CB_Tahun.Value & " " & CB_Bulan.Value
+            
+        Else
+           CLb.Caption = hr & " " & CB_Bulan.Value & " " & CB_Tahun.Value
+        End If
+        
+        CLb.Width = Zero_Negative_Value(IIf(ShowDateSelectors, b - b_ym, b))
+        CB_Bulan.Width = b_combo_m
+        CB_Tahun.Left = IIf(ShowTitle, CLb.Width, CCur((b - b_ym) / 2)) + IIf(YearFirst, 0, b_combo_m + 2)
+        CB_Bulan.Left = IIf(ShowTitle, CLb.Width, CCur((b - b_ym) / 2)) + IIf(YearFirst, b_combo_y + 2, 0)
+        'CB_Tahun.Left = IIf(ShowTitle, CLb.Width, IIf(CLb.Width, Int(CLb.Width / 2), 0)) + _
+        '           IIf(YearFirst, 0, b_combo_m + 2)
+        '
+        'CB_Bulan.Left = IIf(ShowTitle, CLb.Width, IIf(CLb.Width, Int(CLb.Width / 2), 0)) + _
+        '           IIf(YearFirst, b_combo_y + 2, 0)
+        
+            
+    End If
+   
+End Sub
+
+Private Function bInit() As Boolean
+    If Not CB_Tahun Is Nothing Then bInit = True
+End Function
+
+
+Private Function SumMonthsToDate(dDate As Date, Optional lMonth As Long = 1) As Date
+    Dim d As Date
+    
+    d = VBA.DateSerial( _
+            VBA.Year(dDate), _
+            VBA.Month(dDate) + lMonth, _
+            fMin( _
+                VBA.Day(dDate), _
+                VBA.Day( _
+                    VBA.DateSerial( _
+                    VBA.Year(dDate), _
+                    VBA.Month(dDate) + 1 + VBA.Abs(lMonth), _
+                    0))))
+                    
+    If d = VBA.DateSerial(CheckYear(VBA.Year(d)), VBA.Month(d), VBA.Day(d)) Then
+        SumMonthsToDate = d
+    Else
+        SumMonthsToDate = dDate
+    End If
+End Function
+
+Private Function fMin(vFirstValue, ParamArray vValues())
+    Dim i As Long
+    fMin = vFirstValue
+    
+    If IsMissing(vValues) = False Then
+    For i = 0 To UBound(vValues)
+        If fMin > vValues(i) Then
+            fMin = vValues(i)
+        End If
+    Next
+    End If
+End Function
+
+Private Function fMonthName(lIndex As Long)
+    Dim m(11), i As Long, v As Variant
+    lIndex = lIndex Mod 4
+    If Int(lIndex / 2) Then
+        If lIndex Mod 2 Then
+            v = Array("Jan", "Feb", "Mar", "Apr", "May", _
+                "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+        Else
+            v = Array("January", "February", "March", _
+                "April", "May", "June", "July", "August", _
+                "September", "October", "November", "December")
+        End If
+        fMonthName = v
+    Else
+        For i = 0 To 11
+            m(i) = VBA.Strings.MonthName(i + 1, lIndex Mod 2)
+        Next
+        fMonthName = m
+    End If
+End Function
+
+
+Private Function fWeekdayName(lIndex As Long)
+    Dim m(6), i As Long, v As Variant
+    lIndex = lIndex Mod 4
+    If Int(lIndex / 2) Then
+        If lIndex Mod 2 Then
+            v = Array("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
+        Else
+            v = Array("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
+        End If
+        fWeekdayName = v
+    Else
+        For i = 0 To 6
+            m(i) = VBA.Strings.WeekdayName(i + 1, lIndex Mod 2, vbMonday)
+        Next
+        fWeekdayName = m
+    End If
+End Function
+
+
+Private Function CheckYear(ByVal lYear As Long) As Long
+    Select Case lYear
+    Case Is < 1975
+        CheckYear = 1975
+    Case 1975 To 2050
+        CheckYear = lYear
+    Case Else
+        CheckYear = 2050
+    End Select
+End Function
+
+'###########################
+'# Private Sub
+
+Public Sub Event_DblClick()
+    RaiseEvent DblClick
+End Sub
+
+Public Sub Event_Click()
+    RaiseEvent Click
+End Sub
+
+Public Sub Event_KeyDown(ByVal KeyCode As MSForms.ReturnInteger, ByVal Shift As Integer)
+    RaiseEvent KeyDown(KeyCode, Shift)
+End Sub
+
+Private Sub Refresh_Properities()
+    With Me
+        .BackColor = .BackColor
+        .ControlTipText = .ControlTipText
+        .DayFontColor = .DayFontColor
+        .DayLength = .DayLength
+        .GridFontColor = .GridFontColor
+        .MonthLength = .MonthLength
+        If .UseDefaultBackColors = False Then
+            .FridayBackColor = .FridayBackColor
+            .SundayBackColor = .SundayBackColor
+            .HeaderBackColor = .HeaderBackColor
+        End If
+        .ShowDateSelectors = .ShowDateSelectors
+        .ShowDays = .ShowDays
+        .ShowTitle = .ShowTitle
+        .TabIndex = .TabIndex
+        .TabStop = .TabStop
+        .TitleFontColor = .TitleFontColor
+        .ValueIsNull = .ValueIsNull
+        .YearFirst = .YearFirst
+    End With
+End Sub
+
+Private Sub Refresh_Selected_Day(ByVal dValue As Date)
+    Dim i As Long, C As MSForms.Label
+    For i = 0 To 41
+        If mDayButtons(i).Value = dValue And Not bPValueIsNull Then
+            On Error Resume Next
+            mDayButtons(i).Obj_Cmb.SetFocus
+            On Error GoTo 0
+            If Not bPMACFix Then
+                With mDayButtons(i).Obj_CmBl
+                    .BackStyle = fmBackStyleOpaque
+                    .BackColor = lPSelectedBackColor
+                    .ForeColor = cDayFontColorSelected
+                End With
+            Else
+                With mDayButtons(i).Obj_Cmb
+                    .BackStyle = fmBackStyleOpaque
+                    .BackColor = lPSelectedBackColor
+                    .ForeColor = cDayFontColorSelected
+                End With
+            End If
+            lPMonth = VBA.Month(dValue)
+            lPYear = VBA.Year(dValue)
+            lPDay = VBA.Day(dValue)
+            
+        End If
+    Next
+    hr = Me.Day
+    CLb.Caption = hr & " " & CB_Bulan.Value & " " & CB_Tahun.Value
+     On Error Resume Next
+     Me.myTextbox.Text = dValue
+    
+End Sub
+
+Private Sub Refresh_Panel(ByVal lMonth As Long, ByVal lYear As Long)
+   
+    Dim v As Variant, i As Long, l As Long
+    Dim iDay As Long
+    
+    If bInit Then
+        v = ArraY_Days(lMonth, lYear)
+        For i = 0 To 41
+            mDayButtons(i).Value = v(i)
+            
+            
+            If Not bPMACFix Then 'MAC: no label - command button text
+            
+                '# Normal mode
+                ' Text day label
+                With mDayButtons(i).Obj_CmBlNum
+                    If .Caption <> VBA.Day(v(i)) Then
+                        .Caption = VBA.Day(v(i))
+                    End If
+                    If lMonth = VBA.Month(v(i)) Then
+                        If .ForeColor <> GridFontColor Then
+                            .ForeColor = GridFontColor
+                        End If
+                    Else
+                        If .ForeColor <> cDayFontColorInactive Then
+                            .ForeColor = cDayFontColorInactive
+                        End If
+                    End If
+                End With
+                ' Day background label
+                With mDayButtons(i).Obj_CmBl
+                    iDay = VBA.DateTime.Weekday(v(i))
+                    If .BackStyle = fmBackStyleOpaque Then
+                        
+                        .BackStyle = fmBackStyleTransparent
+                    End If
+                    
+                    If UseDefaultBackColors = False Then
+                        If iDay = vbFriday Then
+                            If .BackColor <> lPFridayBackColor Then
+                                .BackColor = lPFridayBackColor
+                                .ForeColor = &HFFFFFF
+                            End If
+                            If .BackStyle <> fmBackStyleOpaque Then
+                                .BackStyle = fmBackStyleOpaque
+                                .ForeColor = &HFFFFFF
+                            End If
+                        ElseIf iDay = vbSunday Then
+                            If .BackColor <> lPSundayBackColor Then
+                                .BackColor = lPSundayBackColor
+                                .ForeColor = &HFFFFFF
+                            End If
+                            If .BackStyle <> fmBackStyleOpaque Then
+                                .BackStyle = fmBackStyleOpaque
+                                .ForeColor = &HFFFFFF
+                            End If
+                        End If
+                    End If
+                    
+                    If Not FridaySelectable And iDay = vbFriday Then
+                        mDayButtons(i).Obj_Cmb.Enabled = False
+                    ElseIf Not SundaySelectable And iDay = vbSunday Then
+                        mDayButtons(i).Obj_Cmb.Enabled = False
+                    Else
+                        mDayButtons(i).Obj_Cmb.Enabled = True
+                    End If
+                    
+                    
+                End With
+                ' Button not altered
+                With mDayButtons(i).Obj_Cmb
+                    If .Caption <> "" Then 'After MACFix
+                        .Caption = ""
+                    End If
+                    If .BackStyle <> fmBackStyleTransparent Then 'Button visible
+                        .BackStyle = fmBackStyleTransparent
+                        
+                    End If
+                End With
+                
+                
+                
+            Else
+            
+                '# MAC Fix mode
+                With mDayButtons(i).Obj_CmBlNum
+                    If .Caption <> "" Then
+                        .Caption = ""
+                    End If
+                End With
+                With mDayButtons(i).Obj_CmBl
+                    If .BackStyle = fmBackStyleOpaque Then
+                        .BackStyle = fmBackStyleTransparent
+                    End If
+                End With
+                With mDayButtons(i).Obj_Cmb
+                    If .Caption <> VBA.Day(v(i)) Then
+                        .Caption = VBA.Day(v(i))
+                    End If
+                    If lMonth = VBA.Month(v(i)) Then
+                        If .ForeColor <> GridFontColor Then
+                            .ForeColor = GridFontColor
+                        End If
+                    Else
+                        If .ForeColor <> cDayFontColorInactive Then
+                            .ForeColor = cDayFontColorInactive
+                        End If
+                    End If
+                    If .BackStyle <> fmBackStyleOpaque Then 'Button visible
+                        .BackStyle = fmBackStyleOpaque
+                    End If
+                    If UseDefaultBackColors = False Then
+                        iDay = VBA.DateTime.Weekday(v(i))
+                        If iDay = vbFriday Then
+                            If .BackColor <> lPFridayBackColor Then
+                                .BackColor = lPFridayBackColor
+                            End If
+                        ElseIf iDay = vbSunday Then
+                            If .BackColor <> lPSundayBackColor Then
+                                .BackColor = lPSundayBackColor
+                            End If
+                        Else
+                            If .BackColor <> BackColor Then
+                                .BackColor = BackColor
+                            End If
+                        End If
+                    Else
+                        If .BackColor <> BackColor Then
+                            .BackColor = BackColor
+                        End If
+                    End If
+                End With
+            End If
+            If CheckValue(v(i)) = False Then
+                mDayButtons(i).Obj_Cmb.Locked = True
+            Else
+                If mDayButtons(i).Obj_Cmb.Locked = True Then
+                    mDayButtons(i).Obj_Cmb.Locked = False
+                End If
+            End If
+        Next
+        
+        If UseDefaultBackColors = False Then
+            For l = 0 To 6
+                If mLabelButtons(l).Obj_CmBl.BackStyle = fmBackStyleTransparent Then
+                    mLabelButtons(l).Obj_CmBl.BackStyle = fmBackStyleOpaque
+                End If
+                If mLabelButtons(l).Obj_CmBl.BackColor <> lPHeaderBackColor Then
+                    mLabelButtons(l).Obj_CmBl.BackColor = lPHeaderBackColor
+                End If
+            Next
+        Else
+            For l = 0 To 6
+                If mLabelButtons(l).Obj_CmBl.BackStyle = fmBackStyleOpaque Then
+                   mLabelButtons(l).Obj_CmBl.BackStyle = fmBackStyleTransparent
+                End If
+        Next
+        End If
+        
+        If lMonth = VBA.Month(dValue) And lYear = VBA.Year(dValue) Then
+            Call Refresh_Selected_Day(dValue)
+        Else
+            lPMonth = 0
+            lPYear = 0
+            lPDay = 0
+        End If
+    End If
+    
+    
+End Sub
+
+Private Function CheckValue(d) As Boolean
+    If VarType(d) = vbDate Then
+        Select Case d
+            Case 1462 To 74510
+                CheckValue = CLng(d) = d
+        End Select
+        
+    End If
+    
+End Function
+
+Private Function Zero_Negative_Value(sNumber As Single) As Single
+
+    If sNumber > 0 Then
+    
+        Zero_Negative_Value = sNumber
+    End If
+  
+End Function
+
+
+
+
+
+
+
